@@ -1,0 +1,4 @@
+.git
+.idea
+ascend-device-plugin
+**/target
