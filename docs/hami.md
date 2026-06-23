@@ -71,7 +71,9 @@ kubectl apply -f https://raw.githubusercontent.com/Project-HAMi/ascend-device-pl
 
 **Note:** To exclusively use an entire card or request multiple cards, you only need to set the corresponding resourceName.
 
-**Note:** The device plugin applies **soft slicing** (`libvnpu` / `hami-vnpu-core` mounts and environment) **only** when the Pod sets `huawei.com/vnpu-mode: hami-core`. Pods **without** this annotation still follow the **original vNPU** path (virtualization templates and `ASCEND_VNPU_SPECS`), so on nodes that only expose `hami-vnpu-core` soft-slicing capacity, such Pods may stay **Pending** indefinitely.
+**Note:** How HAMi chooses soft vs template vNPU for a Pod:
+- A Pod that sets `huawei.com/vnpu-mode: hami-core` always uses **soft slicing** (`libvnpu` / `hami-vnpu-core` mounts and environment) and is scheduled only onto hami-core-capable nodes.
+- A Pod that **omits** the annotation is **mode-agnostic**: its effective mode **follows the node**. On a hami-core node the device plugin applies soft slicing; on a template node it uses the original vNPU path (virtualization templates and `ASCEND_VNPU_SPECS`). The plugin resolves this from the node's `hami-vnpu-core` setting (`IsHamiVnpuCore()`), so annotation-less Pods no longer remain **Pending** on hami-core-only clusters.
 
 ```yaml
 ...
