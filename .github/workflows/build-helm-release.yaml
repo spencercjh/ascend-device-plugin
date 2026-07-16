@@ -1,89 +1,31 @@
-name: Helm Release
+name: Helm Release (Fork)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - main
-    tags:
-      - "v*"
-    paths:
-      - charts/ascend-device-plugin/Chart.yaml
+      - codex/publish-chart-to-fork
 
 env:
   HELM_VERSION: "v3.20.0"
   CHART_PATH: charts/ascend-device-plugin
   CHART_NAME: ascend-device-plugin
+  PUBLISH_OWNER: spencercjh
 
 concurrency:
-  group: helm-release
+  group: fork-helm-release
   cancel-in-progress: false
 
 jobs:
-  detect-chart-version:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    outputs:
-      version_changed: ${{ steps.compare.outputs.version_changed }}
-      previous_version: ${{ steps.compare.outputs.previous_version }}
-      current_version: ${{ steps.compare.outputs.current_version }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Compare chart version
-        id: compare
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          before_sha="${{ github.event.before }}"
-          if [[ -z "${before_sha}" || "${before_sha}" == "0000000000000000000000000000000000000000" ]]; then
-            echo "github.event.before is not available for this push" >&2
-            exit 1
-          fi
-
-          current_version="$(awk '$1 == "version:" { print $2; exit }' "${{ env.CHART_PATH }}/Chart.yaml")"
-          if [[ -z "${current_version}" ]]; then
-            echo "failed to resolve current chart version from ${{ env.CHART_PATH }}/Chart.yaml" >&2
-            exit 1
-          fi
-
-          if git cat-file -e "${before_sha}:${{ env.CHART_PATH }}/Chart.yaml" 2>/dev/null; then
-            previous_version="$(git show "${before_sha}:${{ env.CHART_PATH }}/Chart.yaml" | awk '$1 == "version:" { print $2; exit }')"
-          else
-            previous_version=""
-          fi
-
-          if [[ -z "${previous_version}" || "${previous_version}" != "${current_version}" ]]; then
-            version_changed=true
-          else
-            version_changed=false
-          fi
-
-          {
-            echo "previous_version=${previous_version}"
-            echo "current_version=${current_version}"
-            echo "version_changed=${version_changed}"
-          } >>"$GITHUB_OUTPUT"
-
   helm-release:
-    needs:
-      - detect-chart-version
-    if: >-
-      always() &&
-      (github.event_name == 'workflow_dispatch' ||
-      startsWith(github.ref, 'refs/tags/') ||
-      needs.detect-chart-version.outputs.version_changed == 'true')
+    if: github.repository == 'spencercjh/ascend-device-plugin'
     permissions:
       contents: write
       packages: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           fetch-depth: 0
 
@@ -118,7 +60,7 @@ jobs:
           git fetch origin gh-pages
 
       - name: Set up Helm
-        uses: azure/setup-helm@v5.0.0
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
         with:
           version: ${{ env.HELM_VERSION }}
 
@@ -128,11 +70,10 @@ jobs:
           helm package "${{ env.CHART_PATH }}" --destination .cr-release-packages
 
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.6.0
+        uses: helm/chart-releaser-action@a917fd15b20e8b64b94d9158ad54cd6345335584 # v1.6.0
         with:
           charts_dir: charts
           skip_existing: true
-          skip_packaging: true
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -143,7 +84,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          namespace="${GITHUB_REPOSITORY_OWNER,,}"
           chart_version="$(awk '$1 == "version:" { print $2; exit }' "${{ env.CHART_PATH }}/Chart.yaml")"
           package_path=".cr-release-packages/${{ env.CHART_NAME }}-${chart_version}.tgz"
 
@@ -153,7 +93,7 @@ jobs:
           fi
 
           echo "${GHCR_TOKEN}" | helm registry login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
-          chart_ref="oci://ghcr.io/${namespace}/charts/${{ env.CHART_NAME }}"
+          chart_ref="oci://ghcr.io/${{ env.PUBLISH_OWNER }}/charts/${{ env.CHART_NAME }}"
           lookup_error="$(mktemp)"
 
           if helm show chart "${chart_ref}" --version "${chart_version}" >/dev/null 2>"${lookup_error}"; then
@@ -167,4 +107,4 @@ jobs:
             exit 1
           fi
 
-          helm push "${package_path}" "oci://ghcr.io/${namespace}/charts"
+          helm push "${package_path}" "oci://ghcr.io/${{ env.PUBLISH_OWNER }}/charts"
