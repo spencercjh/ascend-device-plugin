@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
 	"strings"
 	"testing"
 
@@ -128,8 +129,8 @@ func setupAllocateEnv(nodeName, podName, podNamespace string, numContainers int,
 // composeCleanup combines multiple CleanupFuncs into one that runs in reverse order.
 func composeCleanup(fns ...CleanupFunc) CleanupFunc {
 	return func() {
-		for i := len(fns) - 1; i >= 0; i-- {
-			fns[i]()
+		for _, fn := range slices.Backward(fns) {
+			fn()
 		}
 	}
 }
@@ -534,7 +535,7 @@ func TestNewPluginServer(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			mgr := &FakeManager{CommonWordFunc: func() string { return tc.args.commonWord }}
-			ps, err := NewPluginServer(mgr, tc.args.nodeName, 60)
+			ps, err := NewPluginServer(mgr, tc.args.nodeName, 60, false)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("NewPluginServer() error = %v, wantErr %v", err, tc.wantErr)
 			}
@@ -569,7 +570,7 @@ func TestNewPluginServer_RegistersInRequestDevices(t *testing.T) {
 	mgr := &FakeManager{
 		CommonWordFunc: func() string { return commonWord },
 	}
-	ps, err := NewPluginServer(mgr, "test-node", 60)
+	ps, err := NewPluginServer(mgr, "test-node", 60, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -790,32 +791,32 @@ func newPanicOnFatalLogger() *panicOnFatalLogger {
 
 var _ grpclog.LoggerV2 = (*panicOnFatalLogger)(nil)
 
-func (l *panicOnFatalLogger) Info(args ...interface{})   { l.inner.Info(args...) }
-func (l *panicOnFatalLogger) Infoln(args ...interface{}) { l.inner.Infoln(args...) }
-func (l *panicOnFatalLogger) Infof(format string, args ...interface{}) {
+func (l *panicOnFatalLogger) Info(args ...any)   { l.inner.Info(args...) }
+func (l *panicOnFatalLogger) Infoln(args ...any) { l.inner.Infoln(args...) }
+func (l *panicOnFatalLogger) Infof(format string, args ...any) {
 	l.inner.Infof(format, args...)
 }
-func (l *panicOnFatalLogger) Warning(args ...interface{})   { l.inner.Warning(args...) }
-func (l *panicOnFatalLogger) Warningln(args ...interface{}) { l.inner.Warningln(args...) }
-func (l *panicOnFatalLogger) Warningf(format string, args ...interface{}) {
+func (l *panicOnFatalLogger) Warning(args ...any)   { l.inner.Warning(args...) }
+func (l *panicOnFatalLogger) Warningln(args ...any) { l.inner.Warningln(args...) }
+func (l *panicOnFatalLogger) Warningf(format string, args ...any) {
 	l.inner.Warningf(format, args...)
 }
-func (l *panicOnFatalLogger) Error(args ...interface{})   { l.inner.Error(args...) }
-func (l *panicOnFatalLogger) Errorln(args ...interface{}) { l.inner.Errorln(args...) }
-func (l *panicOnFatalLogger) Errorf(format string, args ...interface{}) {
+func (l *panicOnFatalLogger) Error(args ...any)   { l.inner.Error(args...) }
+func (l *panicOnFatalLogger) Errorln(args ...any) { l.inner.Errorln(args...) }
+func (l *panicOnFatalLogger) Errorf(format string, args ...any) {
 	l.inner.Errorf(format, args...)
 }
 func (l *panicOnFatalLogger) V(level int) bool { return l.inner.V(level) }
 
-func (l *panicOnFatalLogger) Fatalf(format string, args ...interface{}) {
+func (l *panicOnFatalLogger) Fatalf(format string, args ...any) {
 	panic(fmt.Sprintf("grpc FATAL: "+format, args...))
 }
 
-func (l *panicOnFatalLogger) Fatalln(args ...interface{}) {
+func (l *panicOnFatalLogger) Fatalln(args ...any) {
 	panic(fmt.Sprintf("grpc FATAL: %v", fmt.Sprintln(args...)))
 }
 
-func (l *panicOnFatalLogger) Fatal(args ...interface{}) {
+func (l *panicOnFatalLogger) Fatal(args ...any) {
 	panic(fmt.Sprintf("grpc FATAL: %v", fmt.Sprint(args...)))
 }
 
@@ -825,17 +826,18 @@ func setupRestartablePluginServer(t *testing.T) *PluginServer {
 	t.Helper()
 
 	ps := &PluginServer{
-		commonWord:            "test-ascend",
-		registerAnno:          "hami.io/node-register-test-ascend",
-		handshakeAnno:         "hami.io/node-handshake-test-ascend",
-		allocAnno:             "huawei.com/test-ascend",
-		toAllocDeviceAnno:     "hami.io/test-ascend-devices-to-allocate",
-		mgr:                   &FakeManager{ResourceNameFunc: func() string { return "test-ascend" }},
-		socket:                path.Join(t.TempDir(), "test-ascend.sock"),
-		stopCh:                make(chan interface{}),
-		healthCh:              make(chan int32),
-		checkIdleVNPUInterval: 3600,
-		dialFunc:              nil,
+		commonWord:                    "test-ascend",
+		registerAnno:                  "hami.io/node-register-test-ascend",
+		handshakeAnno:                 "hami.io/node-handshake-test-ascend",
+		allocAnno:                     "huawei.com/test-ascend",
+		toAllocDeviceAnno:             "hami.io/test-ascend-devices-to-allocate",
+		mgr:                           &FakeManager{ResourceNameFunc: func() string { return "test-ascend" }},
+		socket:                        path.Join(t.TempDir(), "test-ascend.sock"),
+		stopCh:                        make(chan any),
+		healthCh:                      make(chan int32),
+		checkIdleVNPUInterval:         3600,
+		enablePeriodicIdleVNPUCleanup: true,
+		dialFunc:                      nil,
 		registerKubeletFunc: func() error {
 			return nil
 		},
@@ -883,7 +885,7 @@ func TestGrpcServer_MultipleRestarts(t *testing.T) {
 
 	ps := setupRestartablePluginServer(t)
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if err := ps.Start(); err != nil {
 			t.Fatalf("Start() iteration %d failed: %v", i, err)
 		}

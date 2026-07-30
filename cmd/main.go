@@ -35,11 +35,12 @@ import (
 )
 
 var (
-	hwLoglevel            = flag.Int("hw_loglevel", 0, "huawei log level, -1-debug, 0-info, 1-warning, 2-error 3-critical default value: 0")
-	configFile            = flag.String("config_file", "", "config file path")
-	nodeConfigFile        = flag.String("node_config_file", "", "node specific config file path")
-	nodeName              = flag.String("node_name", os.Getenv("NODE_NAME"), "node name")
-	checkIdleVNPUInterval = flag.Int("check_idle_vnpu_interval", 60, "the interval (in seconds) to check idle vNPU and release them")
+	hwLoglevel                    = flag.Int("hw_loglevel", 0, "huawei log level, -1-debug, 0-info, 1-warning, 2-error 3-critical default value: 0")
+	configFile                    = flag.String("config_file", "", "config file path")
+	nodeConfigFile                = flag.String("node_config_file", "", "node specific config file path")
+	nodeName                      = flag.String("node_name", os.Getenv("NODE_NAME"), "node name")
+	checkIdleVNPUInterval         = flag.Int("check_idle_vnpu_interval", 60, "the interval (in seconds) to check idle vNPU and release them")
+	enablePeriodicIdleVNPUCleanup = flag.Bool("enable_periodic_idle_vnpu_cleanup", false, "whether to enable the periodic idle vNPU cleanup goroutine; when disabled, the one-shot cleanup on restart still runs (default false: periodic cleanup disabled)")
 )
 
 func checkFlags() {
@@ -144,7 +145,7 @@ func main() {
 			klog.Errorf("load node config failed: %v", err)
 		}
 	}
-	server, err := server.NewPluginServer(mgr, *nodeName, *checkIdleVNPUInterval)
+	server, err := server.NewPluginServer(mgr, *nodeName, *checkIdleVNPUInterval, *enablePeriodicIdleVNPUCleanup)
 	if err != nil {
 		klog.Fatalf("init PluginServer failed, error is %v", err)
 	}

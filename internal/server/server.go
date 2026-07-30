@@ -58,19 +58,20 @@ var (
 type PluginServer struct {
 	v1beta1.UnimplementedDevicePluginServer
 
-	commonWord            string
-	nodeName              string
-	registerAnno          string
-	handshakeAnno         string
-	allocAnno             string
-	toAllocDeviceAnno     string
-	grpcServer            *grpc.Server
-	mgr                   manager.Manager
-	socket                string
-	stopCh                chan interface{}
-	healthCh              chan int32
-	checkIdleVNPUInterval int
-	wg                    sync.WaitGroup
+	commonWord                    string
+	nodeName                      string
+	registerAnno                  string
+	handshakeAnno                 string
+	allocAnno                     string
+	toAllocDeviceAnno             string
+	grpcServer                    *grpc.Server
+	mgr                           manager.Manager
+	socket                        string
+	stopCh                        chan any
+	healthCh                      chan int32
+	checkIdleVNPUInterval         int
+	enablePeriodicIdleVNPUCleanup bool
+	wg                            sync.WaitGroup
 
 	// test hooks — injected by tests to avoid real socket/kubelet dependencies
 	dialFunc                 func(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error)
@@ -85,20 +86,21 @@ type RuntimeInfo struct {
 	Core   *int32 `json:"core,omitempty"`
 }
 
-func NewPluginServer(mgr manager.Manager, nodeName string, checkIdleVNPUInterval int) (*PluginServer, error) {
+func NewPluginServer(mgr manager.Manager, nodeName string, checkIdleVNPUInterval int, enablePeriodicIdleVNPUCleanup bool) (*PluginServer, error) {
 	commonWord := mgr.CommonWord()
 	server := &PluginServer{
-		commonWord:            commonWord,
-		nodeName:              nodeName,
-		registerAnno:          fmt.Sprintf("hami.io/node-register-%s", commonWord),
-		handshakeAnno:         fmt.Sprintf("hami.io/node-handshake-%s", commonWord),
-		allocAnno:             fmt.Sprintf("huawei.com/%s", commonWord),
-		toAllocDeviceAnno:     fmt.Sprintf("hami.io/%s-devices-to-allocate", commonWord),
-		mgr:                   mgr,
-		socket:                path.Join(v1beta1.DevicePluginPath, fmt.Sprintf("%s.sock", commonWord)),
-		stopCh:                make(chan interface{}),
-		healthCh:              make(chan int32),
-		checkIdleVNPUInterval: checkIdleVNPUInterval,
+		commonWord:                    commonWord,
+		nodeName:                      nodeName,
+		registerAnno:                  fmt.Sprintf("hami.io/node-register-%s", commonWord),
+		handshakeAnno:                 fmt.Sprintf("hami.io/node-handshake-%s", commonWord),
+		allocAnno:                     fmt.Sprintf("huawei.com/%s", commonWord),
+		toAllocDeviceAnno:             fmt.Sprintf("hami.io/%s-devices-to-allocate", commonWord),
+		mgr:                           mgr,
+		socket:                        path.Join(v1beta1.DevicePluginPath, fmt.Sprintf("%s.sock", commonWord)),
+		stopCh:                        make(chan any),
+		healthCh:                      make(chan int32),
+		checkIdleVNPUInterval:         checkIdleVNPUInterval,
+		enablePeriodicIdleVNPUCleanup: enablePeriodicIdleVNPUCleanup,
 	}
 	// enable calling hami methods
 	device.InRequestDevices[commonWord] = server.toAllocDeviceAnno
@@ -121,7 +123,7 @@ func (ps *PluginServer) Start() error {
 		return err
 	}
 
-	ps.stopCh = make(chan interface{})
+	ps.stopCh = make(chan any)
 	ps.grpcServer = grpc.NewServer()
 
 	err := ps.mgr.UpdateDevice()
@@ -139,19 +141,16 @@ func (ps *PluginServer) Start() error {
 	if err != nil {
 		return err
 	}
-	// Add to the WaitGroup synchronously before launching the goroutines.
-	// sync.WaitGroup requires a positive Add (from a zero counter) to
-	// happen-before Wait; doing Add inside the goroutine races with Stop()'s
-	// Wait and panics with "WaitGroup is reused before previous Wait has returned".
-	ps.wg.Add(1)
-	go ps.startPeriodicCheckIdleVNPUs()
-	ps.wg.Add(1)
-	go ps.watchAndRegister()
+	// sync.WaitGroup.Go handles the Add(1)/Done() pairing internally, so the
+	// goroutine bodies no longer need their own defer ps.wg.Done().
+	if ps.enablePeriodicIdleVNPUCleanup {
+		ps.wg.Go(ps.startPeriodicCheckIdleVNPUs)
+	}
+	ps.wg.Go(ps.watchAndRegister)
 	return nil
 }
 
 func (ps *PluginServer) startPeriodicCheckIdleVNPUs() {
-	defer ps.wg.Done()
 	ticker := time.NewTicker(time.Duration(ps.checkIdleVNPUInterval) * time.Second)
 	defer ticker.Stop()
 	for {
@@ -185,7 +184,7 @@ func (ps *PluginServer) Stop() error {
 	return nil
 }
 
-func (ps *PluginServer) StopCh() <-chan interface{} {
+func (ps *PluginServer) StopCh() <-chan any {
 	return ps.stopCh
 }
 
@@ -201,9 +200,7 @@ func (ps *PluginServer) serve() error {
 	}
 	v1beta1.RegisterDevicePluginServer(ps.grpcServer, ps)
 	resourceName := ps.mgr.ResourceName()
-	ps.wg.Add(1)
-	go func() {
-		defer ps.wg.Done()
+	ps.wg.Go(func() {
 		lastCrashTime := time.Now()
 		restartCount := 0
 		for {
@@ -236,7 +233,7 @@ func (ps *PluginServer) serve() error {
 				restartCount++
 			}
 		}
-	}()
+	})
 
 	// Wait for server to start by launching a blocking connexion
 	conn, err := ps.dial(ps.socket, 5*time.Second)
@@ -257,7 +254,7 @@ func (ps *PluginServer) apiDevices() []*v1beta1.Device {
 		if dev.Health {
 			health = v1beta1.Healthy
 		}
-		for i := 0; i < vCount; i++ {
+		for i := range vCount {
 			device := v1beta1.Device{
 				ID:     fmt.Sprintf("%s-%d", dev.UUID, i),
 				Health: health,

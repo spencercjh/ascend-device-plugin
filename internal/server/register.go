@@ -35,10 +35,9 @@ import (
 	"github.com/Project-HAMi/HAMi/pkg/util"
 )
 
-// watchAndRegister must be launched with ps.wg.Add(1) already called by the
-// caller (see Start()); doing the Add here would race with Stop()'s wg.Wait().
+// watchAndRegister is launched via ps.wg.Go in Start(), which owns the
+// WaitGroup Add(1)/Done() pairing; this function must not call wg.Done itself.
 func (ps *PluginServer) watchAndRegister() {
-	defer ps.wg.Done()
 	timer := time.After(1 * time.Second)
 	for {
 		select {
