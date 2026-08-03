@@ -461,6 +461,7 @@ func TestBuildContainerAllocateResponse(t *testing.T) {
 					{HostPath: "/usr/local/hami-vnpu-core", ContainerPath: "/hami-vnpu-core", ReadOnly: true},
 					{HostPath: "/usr/local/hami-vnpu-core/ld.so.preload", ContainerPath: "/etc/ld.so.preload", ReadOnly: true},
 					{HostPath: "/usr/local/hami-shared-region", ContainerPath: "/hami-shared-region", ReadOnly: false},
+					{HostPath: hostHookPath + "/containers/_", ContainerPath: "/hami-vnpu-shmem", ReadOnly: false},
 				},
 			},
 		},
