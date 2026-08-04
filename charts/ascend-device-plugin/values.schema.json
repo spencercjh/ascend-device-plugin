@@ -19,6 +19,12 @@
         "daemonSet": {
             "type": "object",
             "properties": {
+                "args": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "name": {
                     "type": "string"
                 }

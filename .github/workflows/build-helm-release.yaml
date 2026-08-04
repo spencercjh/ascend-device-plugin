@@ -15,6 +15,9 @@ env:
   CHART_PATH: charts/ascend-device-plugin
   CHART_NAME: ascend-device-plugin
 
+permissions:
+  contents: read
+
 concurrency:
   group: helm-release
   cancel-in-progress: false

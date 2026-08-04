@@ -77,6 +77,9 @@ nodeConfig: |-
 | config.create | bool | `true` | Create the device configuration ConfigMap. |
 | config.deviceConfigMapName | string | `"hami-scheduler-device"` | Name of the chart-managed device configuration ConfigMap. |
 | config.existingDeviceConfigMapName | string | `""` | Existing device configuration ConfigMap to mount instead of the chart-managed ConfigMap. |
+| daemonSet.args[0] | string | `"--config_file"` |  |
+| daemonSet.args[1] | string | `"/device-config.yaml"` |  |
+| daemonSet.args[2] | string | `"--v=4"` |  |
 | daemonSet.name | string | `"hami-ascend-device-plugin"` | Device plugin DaemonSet name. |
 | fullnameOverride | string | `""` | Override the fully qualified resource name. |
 | hamiVnpuCore.enabled | bool | `false` | Enable hami-vnpu-core in the generated global device configuration. |
@@ -89,10 +92,10 @@ nodeConfig: |-
 | nodeConfigMap.name | string | `"hami-device-node-config"` | Per-node configuration ConfigMap name. |
 | nodeSelector.ascend | string | `"on"` | Node label value used to schedule the device plugin. |
 | rbac.name | string | `"hami-ascend"` | Name shared by the chart-managed RBAC resources. |
-| resources.limits.cpu | string | `"500m"` | CPU limit for the device plugin container. |
-| resources.limits.memory | string | `"500Mi"` | Memory limit for the device plugin container. |
-| resources.requests.cpu | string | `"500m"` | Requested CPU for the device plugin container. |
-| resources.requests.memory | string | `"500Mi"` | Requested memory for the device plugin container. |
+| resources.limits.cpu | string | `"500m"` |  |
+| resources.limits.memory | string | `"500Mi"` |  |
+| resources.requests.cpu | string | `"500m"` |  |
+| resources.requests.memory | string | `"500Mi"` |  |
 | runtimeClass.create | bool | `true` | Create the Ascend RuntimeClass. |
 | runtimeClass.handler | string | `"ascend"` | Container runtime handler used by the RuntimeClass. |
 | runtimeClass.name | string | `"ascend"` | RuntimeClass resource name. |
