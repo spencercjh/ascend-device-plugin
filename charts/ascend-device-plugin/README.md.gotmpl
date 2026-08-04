@@ -10,7 +10,6 @@ This chart deploys the standalone HAMi Ascend device plugin manifests:
 - ConfigMaps
 - RBAC and ServiceAccount
 - Device plugin DaemonSet
-- (Optional) vNPU monitor integration resources (Service, ServiceMonitor, PrometheusRule)
 
 ## Install
 
@@ -24,8 +23,7 @@ Install the chart:
 
 ```bash
 helm install ascend-device-plugin ./charts/ascend-device-plugin \
-  --namespace kube-system \
-  --set image.tag=v1.3.0
+  --namespace kube-system
 ```
 
 If the HAMi chart already manages the Ascend device plugin DaemonSet, related ConfigMaps, RBAC, or RuntimeClass, do not deploy this standalone chart at the same time.
@@ -37,7 +35,6 @@ If another chart, such as the HAMi chart, already owns the shared `hami-schedule
 ```bash
 helm install ascend-device-plugin ./charts/ascend-device-plugin \
   --namespace kube-system \
-  --set image.tag=v1.3.0 \
   --set config.create=false \
   --set config.existingDeviceConfigMapName=hami-scheduler-device
 ```
@@ -51,24 +48,7 @@ Enable the global `vnpus.hamiVnpuCore` switch in the generated device config:
 ```bash
 helm install ascend-device-plugin ./charts/ascend-device-plugin \
   --namespace kube-system \
-  --set image.tag=v1.3.0 \
   --set hamiVnpuCore.enabled=true
-```
-
-## vNPU Monitor Integration
-
-The chart can also create the resources from `ascend-vnpu-monitor-integration.yaml`.
-
-- `vnpuMonitor.enabled=true` creates the metrics `Service`.
-- `ServiceMonitor` and `PrometheusRule` are created by default; ensure Prometheus Operator CRDs are installed first.
-- You can disable either one with `vnpuMonitor.serviceMonitor.create=false` or `vnpuMonitor.prometheusRule.create=false`.
-
-```bash
-helm install ascend-device-plugin ./charts/ascend-device-plugin \
-  --namespace kube-system \
-  --set image.tag=v1.3.0 \
-  --set hamiVnpuCore.enabled=true \
-  --set vnpuMonitor.enabled=true
 ```
 
 ## Node Configuration

@@ -33,8 +33,12 @@ update-chart-docs:
 verify-helm-chart:
 	$(MAKE) update-chart-docs
 	git diff --exit-code -- charts/ascend-device-plugin/README.md charts/ascend-device-plugin/values.schema.json
-	helm lint charts/ascend-device-plugin
-	helm template ascend-device-plugin charts/ascend-device-plugin >/dev/null
+	@set -eu; \
+	manifest="$$(mktemp)"; \
+	trap 'rm -f "$$manifest"' EXIT; \
+	helm lint --strict charts/ascend-device-plugin; \
+	helm template ascend-device-plugin charts/ascend-device-plugin >"$$manifest"; \
+	awk '/^[[:space:]]+args:$$/ { in_args = 1; next } in_args && /^[[:space:]]*$$/ { next } in_args && /^[[:space:]]+- / { value = $$0; sub(/^[[:space:]]+- /, "", value); args[++count] = value; next } in_args { in_args = 0 } END { exit !(args[1] == "--config_file" && args[2] == "/device-config.yaml" && args[3] == "--node_config_file" && args[4] == "/node-config.yaml" && args[5] == "--v=4") }' "$$manifest"
 
 clean:
 	rm -rf ./ascend-device-plugin

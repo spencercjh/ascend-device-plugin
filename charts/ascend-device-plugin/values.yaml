@@ -20,6 +20,8 @@ daemonSet:
   args:
     - --config_file
     - /device-config.yaml
+    - --node_config_file
+    - /node-config.yaml
     - --v=4
 
 rbac:
@@ -75,58 +77,6 @@ nodeConfigMap:
 hamiVnpuCore:
   # hamiVnpuCore.enabled -- Enable hami-vnpu-core in the generated global device configuration.
   enabled: false
-
-vnpuMonitor:
-  # vnpuMonitor.enabled -- Create vNPU monitoring integration resources.
-  enabled: false
-  service:
-    # vnpuMonitor.service.name -- Metrics Service name.
-    name: hami-ascend-device-plugin-metrics
-  serviceMonitor:
-    # vnpuMonitor.serviceMonitor.create -- Create a Prometheus Operator ServiceMonitor.
-    create: true
-
-    # vnpuMonitor.serviceMonitor.name -- ServiceMonitor name.
-    name: hami-ascend-vnpu-monitor
-
-    # vnpuMonitor.serviceMonitor.namespace -- Namespace in which to create the ServiceMonitor.
-    namespace: monitoring
-    labels:
-      # vnpuMonitor.serviceMonitor.labels.release -- Prometheus release label applied to the ServiceMonitor.
-      release: prometheus
-
-    # vnpuMonitor.serviceMonitor.interval -- Metrics scrape interval.
-    interval: 15s
-
-    # vnpuMonitor.serviceMonitor.path -- Metrics HTTP path.
-    path: /metrics
-  prometheusRule:
-    # vnpuMonitor.prometheusRule.create -- Create a Prometheus Operator PrometheusRule.
-    create: true
-
-    # vnpuMonitor.prometheusRule.name -- PrometheusRule name.
-    name: hami-ascend-vnpu-monitor
-
-    # vnpuMonitor.prometheusRule.namespace -- Namespace in which to create the PrometheusRule.
-    namespace: monitoring
-    labels:
-      # vnpuMonitor.prometheusRule.labels.release -- Prometheus release label applied to the PrometheusRule.
-      release: prometheus
-
-      # vnpuMonitor.prometheusRule.labels.role -- Role label applied to the PrometheusRule.
-      role: recording-rules
-
-      # vnpuMonitor.prometheusRule.labels.vendor -- Vendor label applied to the PrometheusRule.
-      vendor: ascend
-
-    # vnpuMonitor.prometheusRule.groupName -- Prometheus rule group name.
-    groupName: ascend-vnpu
-
-    # vnpuMonitor.prometheusRule.interval -- Prometheus rule evaluation interval.
-    interval: 15s
-    groupLabels:
-      # vnpuMonitor.prometheusRule.groupLabels.vendor -- Vendor label applied to the Prometheus rule group.
-      vendor: ascend
 
  # @ignored
 deviceConfig: |-
