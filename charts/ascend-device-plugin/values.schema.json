@@ -1,9 +1,28 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
+    "required": [
+        "image",
+        "daemonSet",
+        "rbac",
+        "runtimeClass",
+        "serviceAccount",
+        "nodeSelector",
+        "resources",
+        "config",
+        "nodeConfigMap",
+        "hamiVnpuCore",
+        "deviceConfig",
+        "nodeConfig"
+    ],
     "properties": {
         "config": {
             "type": "object",
+            "required": [
+                "create",
+                "existingDeviceConfigMapName",
+                "deviceConfigMapName"
+            ],
             "properties": {
                 "create": {
                     "type": "boolean"
@@ -14,10 +33,15 @@
                 "existingDeviceConfigMapName": {
                     "type": "string"
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "daemonSet": {
             "type": "object",
+            "required": [
+                "name",
+                "args"
+            ],
             "properties": {
                 "args": {
                     "type": "array",
@@ -28,7 +52,8 @@
                 "name": {
                     "type": "string"
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "deviceConfig": {
             "type": "string"
@@ -38,25 +63,40 @@
         },
         "hamiVnpuCore": {
             "type": "object",
+            "required": [
+                "enabled"
+            ],
             "properties": {
                 "enabled": {
                     "type": "boolean"
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "image": {
             "type": "object",
+            "required": [
+                "repository",
+                "pullPolicy"
+            ],
             "properties": {
                 "pullPolicy": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "Always",
+                        "IfNotPresent",
+                        "Never"
+                    ]
                 },
                 "repository": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
                 },
                 "tag": {
                     "type": "string"
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "nameOverride": {
             "type": "string"
@@ -66,6 +106,10 @@
         },
         "nodeConfigMap": {
             "type": "object",
+            "required": [
+                "create",
+                "name"
+            ],
             "properties": {
                 "create": {
                     "type": "boolean"
@@ -73,7 +117,8 @@
                 "name": {
                     "type": "string"
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "nodeSelector": {
             "type": "object",
@@ -85,14 +130,22 @@
         },
         "rbac": {
             "type": "object",
+            "required": [
+                "name"
+            ],
             "properties": {
                 "name": {
                     "type": "string"
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "resources": {
             "type": "object",
+            "required": [
+                "requests",
+                "limits"
+            ],
             "properties": {
                 "limits": {
                     "type": "object",
@@ -116,10 +169,16 @@
                         }
                     }
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "runtimeClass": {
             "type": "object",
+            "required": [
+                "create",
+                "name",
+                "handler"
+            ],
             "properties": {
                 "create": {
                     "type": "boolean"
@@ -130,10 +189,15 @@
                 "name": {
                     "type": "string"
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "serviceAccount": {
             "type": "object",
+            "required": [
+                "create",
+                "name"
+            ],
             "properties": {
                 "create": {
                     "type": "boolean"
@@ -141,7 +205,8 @@
                 "name": {
                     "type": "string"
                 }
-            }
+            },
+            "additionalProperties": false
         }
     }
 }

@@ -6,7 +6,7 @@ This guide covers deploying `ascend-device-plugin` for use with the [Volcano](ht
 
 ## Prerequisites
 
-- **Kubernetes**: ≥ 1.16
+- **Kubernetes**: ≥ 1.20
 - **Volcano**: ≥ 1.14 (≥ 1.16 required for `hami-core` soft slicing)
 - [ascend-docker-runtime](https://gitcode.com/Ascend/mind-cluster/tree/master/component/ascend-docker-runtime)
 - **Ascend Driver Version**: ≥ 25.5

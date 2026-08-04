@@ -1,12 +1,12 @@
-image:
+image: # @schema required:true;additionalProperties:false
   # image.repository -- Container image repository.
-  repository: projecthami/ascend-device-plugin
+  repository: projecthami/ascend-device-plugin # @schema required:true;minLength:1
 
   # image.tag -- Container image tag. Defaults to the chart `appVersion` when empty.
   tag: ""
 
   # image.pullPolicy -- Kubernetes image pull policy.
-  pullPolicy: IfNotPresent
+  pullPolicy: IfNotPresent # @schema required:true;enum:[Always, IfNotPresent, Never]
 
 # nameOverride -- Override the chart name used in resource names.
 nameOverride: ""
@@ -14,72 +14,72 @@ nameOverride: ""
 # fullnameOverride -- Override the fully qualified resource name.
 fullnameOverride: ""
 
-daemonSet:
+daemonSet: # @schema required:true;additionalProperties:false
   # daemonSet.name -- Device plugin DaemonSet name.
-  name: hami-ascend-device-plugin
-  args:
+  name: hami-ascend-device-plugin # @schema required:true
+  args: # @schema required:true
     - --config_file
     - /device-config.yaml
     - --node_config_file
     - /node-config.yaml
     - --v=4
 
-rbac:
+rbac: # @schema required:true;additionalProperties:false
   # rbac.name -- Name shared by the chart-managed RBAC resources.
-  name: hami-ascend
+  name: hami-ascend # @schema required:true
 
-runtimeClass:
+runtimeClass: # @schema required:true;additionalProperties:false
   # runtimeClass.create -- Create the Ascend RuntimeClass.
-  create: true
+  create: true # @schema required:true
 
   # runtimeClass.name -- RuntimeClass resource name.
-  name: ascend
+  name: ascend # @schema required:true
 
   # runtimeClass.handler -- Container runtime handler used by the RuntimeClass.
-  handler: ascend
+  handler: ascend # @schema required:true
 
-serviceAccount:
+serviceAccount: # @schema required:true;additionalProperties:false
   # serviceAccount.create -- Create a ServiceAccount for the device plugin.
-  create: true
+  create: true # @schema required:true
 
   # serviceAccount.name -- ServiceAccount name. Defaults to the chart fullname when empty and creation is enabled.
-  name: hami-ascend
+  name: hami-ascend # @schema required:true
 
-nodeSelector:
+nodeSelector: # @schema required:true
   # nodeSelector.ascend -- Node label value used to schedule the device plugin.
   ascend: "on"
 
-resources:
-  requests:
+resources: # @schema required:true;additionalProperties:false
+  requests: # @schema required:true
     memory: 500Mi
     cpu: 500m
-  limits:
+  limits: # @schema required:true
     memory: 500Mi
     cpu: 500m
 
-config:
+config: # @schema required:true;additionalProperties:false
   # config.create -- Create the device configuration ConfigMap.
-  create: true
+  create: true # @schema required:true
 
   # config.existingDeviceConfigMapName -- Existing device configuration ConfigMap to mount instead of the chart-managed ConfigMap.
-  existingDeviceConfigMapName: ""
+  existingDeviceConfigMapName: "" # @schema required:true
 
   # config.deviceConfigMapName -- Name of the chart-managed device configuration ConfigMap.
-  deviceConfigMapName: hami-scheduler-device
+  deviceConfigMapName: hami-scheduler-device # @schema required:true
 
-nodeConfigMap:
+nodeConfigMap: # @schema required:true;additionalProperties:false
   # nodeConfigMap.create -- Create the per-node configuration ConfigMap.
-  create: true
+  create: true # @schema required:true
 
   # nodeConfigMap.name -- Per-node configuration ConfigMap name.
-  name: hami-device-node-config
+  name: hami-device-node-config # @schema required:true
 
-hamiVnpuCore:
+hamiVnpuCore: # @schema required:true;additionalProperties:false
   # hamiVnpuCore.enabled -- Enable hami-vnpu-core in the generated global device configuration.
-  enabled: false
+  enabled: false # @schema required:true
 
- # @ignored
-deviceConfig: |-
+# @ignored
+deviceConfig: |- # @schema required:true
   vnpus:
     hamiVnpuCore: {{ .Values.hamiVnpuCore.enabled }}
     configs:
@@ -208,5 +208,5 @@ deviceConfig: |-
       aiCPU: 7
 
 # nodeConfig -- Per-node hami-vnpu-core configuration written to the node ConfigMap.
-nodeConfig: |-
+nodeConfig: |- # @schema required:true
   nodes: []

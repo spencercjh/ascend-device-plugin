@@ -59,7 +59,9 @@ jobs:
           version: v1.14.2
 
       - name: Run Helm chart verification
-        run: make verify-helm-chart
+        run: |
+          make verify-helm-chart
+          make verify-helm-release-path
 
   helm-lint-required:
     runs-on: ubuntu-latest

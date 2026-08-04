@@ -90,6 +90,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Helm
+        uses: azure/setup-helm@v5.0.0
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Set up helm-docs
+        uses: gabe565/setup-helm-docs-action@v1
+        with:
+          version: v1.14.2
+
+      - name: Verify Helm chart before release writes
+        run: |
+          make verify-helm-chart
+          make verify-helm-release-path
+
       - name: Configure Git
         run: |
           git config user.name "$GITHUB_ACTOR"
@@ -120,22 +140,11 @@ jobs:
           git worktree remove --force "${workdir}"
           git fetch origin gh-pages
 
-      - name: Set up Helm
-        uses: azure/setup-helm@v5.0.0
-        with:
-          version: ${{ env.HELM_VERSION }}
-
-      - name: Package Helm chart
-        run: |
-          mkdir -p .cr-release-packages
-          helm package "${{ env.CHART_PATH }}" --destination .cr-release-packages
-
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.6.0
         with:
           charts_dir: charts
           skip_existing: true
-          skip_packaging: true
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
