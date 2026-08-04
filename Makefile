@@ -59,7 +59,10 @@ verify-helm-release-path:
 	helm show chart "$$package_path" >/dev/null; \
 	grep -Fq 'uses: helm/chart-releaser-action@v1.6.0' .github/workflows/build-helm-release.yaml; \
 	grep -Fq 'charts_dir: charts' .github/workflows/build-helm-release.yaml; \
-	if grep -Eq '^[[:space:]]*skip_packaging:[[:space:]]*true' .github/workflows/build-helm-release.yaml; then echo 'chart-releaser skip_packaging must remain disabled' >&2; exit 1; fi
+	if grep -Eq '^[[:space:]]*skip_packaging:[[:space:]]*true' .github/workflows/build-helm-release.yaml; then echo 'chart-releaser skip_packaging must remain disabled' >&2; exit 1; fi; \
+	show_line="$$(grep -n 'helm show chart' .github/workflows/build-helm-release.yaml | cut -d: -f1)"; \
+	package_line="$$(grep -n 'helm package "$${{ env.CHART_PATH }}" --destination .cr-release-packages' .github/workflows/build-helm-release.yaml | cut -d: -f1)"; \
+	if [ -z "$$show_line" ] || [ -z "$$package_line" ] || [ "$$show_line" -ge "$$package_line" ]; then echo 'GHCR existence check must precede packaging' >&2; exit 1; fi
 
 clean:
 	rm -rf ./ascend-device-plugin

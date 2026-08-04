@@ -157,10 +157,9 @@ jobs:
 
           namespace="${GITHUB_REPOSITORY_OWNER,,}"
           chart_version="$(awk '$1 == "version:" { print $2; exit }' "${{ env.CHART_PATH }}/Chart.yaml")"
-          package_path=".cr-release-packages/${{ env.CHART_NAME }}-${chart_version}.tgz"
 
-          if [[ -z "${chart_version}" || ! -f "${package_path}" ]]; then
-            echo "failed to resolve packaged chart for ${{ env.CHART_NAME }}" >&2
+          if [[ -z "${chart_version}" ]]; then
+            echo "failed to resolve chart version for ${{ env.CHART_NAME }}" >&2
             exit 1
           fi
 
@@ -176,6 +175,15 @@ jobs:
           if ! grep -Eqi 'not found|manifest unknown' "${lookup_error}"; then
             echo "failed to query ${chart_ref}:${chart_version}" >&2
             cat "${lookup_error}" >&2
+            exit 1
+          fi
+
+          mkdir -p .cr-release-packages
+          helm package "${{ env.CHART_PATH }}" --destination .cr-release-packages
+          package_path=".cr-release-packages/${{ env.CHART_NAME }}-${chart_version}.tgz"
+
+          if [[ ! -f "${package_path}" ]]; then
+            echo "failed to package chart for ${{ env.CHART_NAME }}" >&2
             exit 1
           fi
 
