@@ -6,7 +6,7 @@
 
 ## 环境要求
 
-- **Kubernetes**：≥ 1.16
+- **Kubernetes**：≥ 1.20
 - **Volcano**：≥ 1.14（`hami-core` 软切分需要 ≥ 1.16）
 - [ascend-docker-runtime](https://gitcode.com/Ascend/mind-cluster/tree/master/component/ascend-docker-runtime)
 - Ascend 驱动版本：≥ 25.5
@@ -165,4 +165,3 @@ curl -s $POD_IP:9395/metrics | grep hami_
 | `hami_vgpu_memory_used_bytes` | `namespace`, `pod`, `container`, `vdevice_index`, `device_uuid` | 每容器 vNPU 已用显存(字节) |
 | `hami_vgpu_memory_limit_bytes` | `namespace`, `pod`, `container`, `vdevice_index`, `device_uuid` | 每容器 vNPU 显存上限(字节) |
 | `hami_container_device_utilization_ratio` | `namespace`, `pod`, `container`, `vdevice_index`, `device_uuid` | 容器所在设备的 AICore 利用率(0–100) |
-
