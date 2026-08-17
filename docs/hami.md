@@ -22,6 +22,8 @@ This guide covers deploying `ascend-device-plugin` for use with the [HAMi](https
 
   Both require `devices.ascend.enabled: true` to be set when deploying HAMi.
 
+  HAMi v2.9.0 moved the Ascend chip list from `vnpus` to `vnpus.configs` in the `hami-scheduler-device` ConfigMap. The plugin reads both layouts, and logs a warning when it falls back to the older one, so it can be upgraded ahead of HAMi.
+
 **Note:** `hami-vnpu-core` soft slicing currently only supports ARM platforms; template-based hard slicing has no such restriction.
 
 ## Deployment
@@ -41,7 +43,7 @@ kubectl apply -f https://raw.githubusercontent.com/Project-HAMi/ascend-device-pl
 ### Deploy ConfigMap
 
 * **HAMi and `ascend-device-plugin` in the same namespace (recommended)**: skip this step — HAMi's existing `hami-scheduler-device` ConfigMap already covers Ascend.
-* **Different namespaces**: deploy the Ascend ConfigMap into `ascend-device-plugin`'s own namespace, then manually merge its `vnpus:` section into HAMi's existing `hami-scheduler-device` ConfigMap without touching HAMi's other device entries. Keep both copies in sync whenever you change templates, resourceNames, or `hamiVnpuCore`.
+* **Different namespaces**: deploy the Ascend ConfigMap into `ascend-device-plugin`'s own namespace, then manually merge its `vnpus:` section into HAMi's existing `hami-scheduler-device` ConfigMap without touching HAMi's other device entries. On HAMi < v2.9.0, keep that ConfigMap's own `vnpus` list layout — its scheduler cannot read `vnpus.configs`. Keep both copies in sync whenever you change templates, resourceNames, or `hamiVnpuCore`.
 
   ```bash
   kubectl apply -f https://raw.githubusercontent.com/Project-HAMi/ascend-device-plugin/main/ascend-device-configmap.yaml
