@@ -22,6 +22,8 @@
 
   两种模式都需要在部署 HAMi 时设置 `devices.ascend.enabled: true`。
 
+  HAMi v2.9.0 把 `hami-scheduler-device` ConfigMap 中的 Ascend 芯片列表从 `vnpus` 挪到了 `vnpus.configs`。插件两种格式都能读，回退到旧格式时会打一条告警日志，因此可以先于 HAMi 升级。
+
 **注意：** `hami-vnpu-core` 软切分目前仅支持 ARM 平台；基于模板的硬切分没有此限制。
 
 ## 部署
@@ -41,7 +43,7 @@ kubectl apply -f https://raw.githubusercontent.com/Project-HAMi/ascend-device-pl
 ### 部署 ConfigMap
 
 * **HAMi 和 `ascend-device-plugin` 在同一命名空间(推荐)**：跳过这一步，HAMi 现有的 `hami-scheduler-device` 已经包含 Ascend 配置。
-* **不同命名空间**：把 Ascend 的 ConfigMap 部署到 `ascend-device-plugin` 自己的命名空间下，然后手动把其中的 `vnpus:` 部分合并进 HAMi 现有的 `hami-scheduler-device`，不要动 HAMi 其他设备的配置。以后修改模板、resourceName 或 `hamiVnpuCore` 时，两边同步更新。
+* **不同命名空间**：把 Ascend 的 ConfigMap 部署到 `ascend-device-plugin` 自己的命名空间下，然后手动把其中的 `vnpus:` 部分合并进 HAMi 现有的 `hami-scheduler-device`，不要动 HAMi 其他设备的配置。若 HAMi < v2.9.0，合并时要保留它自己的 `vnpus` 列表写法——那边的调度器读不了 `vnpus.configs`。以后修改模板、resourceName 或 `hamiVnpuCore` 时，两边同步更新。
 
   ```bash
   kubectl apply -f https://raw.githubusercontent.com/Project-HAMi/ascend-device-plugin/main/ascend-device-configmap.yaml

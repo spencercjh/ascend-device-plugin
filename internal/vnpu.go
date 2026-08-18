@@ -17,9 +17,12 @@ limitations under the License.
 package internal
 
 import (
+	"encoding/json"
+	"errors"
 	"os"
 
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/klog/v2"
 )
 
 type Template struct {
@@ -50,6 +53,13 @@ type Config struct {
 	VNPUs VNPUsConfig `json:"vnpus"`
 }
 
+// legacyConfig is the device-config.yaml layout of HAMi <= v2.8.x, where vnpus
+// is a plain list; v2.9.0 moved that list under vnpus.configs.
+type legacyConfig struct {
+	HamiVnpuCore bool         `json:"hamiVnpuCore,omitempty"`
+	VNPUs        []VNPUConfig `json:"vnpus"`
+}
+
 // FilterDevices defines devices that should be ignored by HAMi.
 // A device is ignored when its UUID is listed in UUID or its index is listed in Index.
 type FilterDevices struct {
@@ -65,6 +75,17 @@ func (fd FilterDevices) HasUUID() bool {
 	return len(fd.UUID) > 0
 }
 
+// isLegacyVNPUsLayout reports whether err is the "vnpus holds a list" mismatch
+// a HAMi <= v2.8.x device config produces. Any other decoding failure, deeper
+// errors inside vnpus included, is a genuine one and keeps its own message.
+func isLegacyVNPUsLayout(err error) bool {
+	var typeErr *json.UnmarshalTypeError
+	return errors.As(err, &typeErr) && typeErr.Field == "vnpus" && typeErr.Value == "array"
+}
+
+// LoadConfig reads the hami-scheduler-device config, accepting both the
+// HAMi >= v2.9.0 layout and the older one so that upgrading this plugin does
+// not require upgrading HAMi at the same time.
 func LoadConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -72,10 +93,20 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	var yamlData Config
 	err = yaml.Unmarshal(data, &yamlData)
-	if err != nil {
+	if err == nil {
+		return &yamlData, nil
+	}
+	if !isLegacyVNPUsLayout(err) {
 		return nil, err
 	}
-	return &yamlData, nil
+
+	var legacy legacyConfig
+	if err := yaml.Unmarshal(data, &legacy); err != nil {
+		return nil, err
+	}
+	klog.Warningf("%s uses the device config layout of HAMi <= v2.8.x (vnpus holds a list); upgrade HAMi "+
+		"to v2.9.0+ to get vnpus.hamiVnpuCore and hami-core soft slicing", path)
+	return &Config{VNPUs: VNPUsConfig{HamiVnpuCore: legacy.HamiVnpuCore, Configs: legacy.VNPUs}}, nil
 }
 
 type NodeConfig struct {
