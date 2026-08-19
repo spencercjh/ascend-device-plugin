@@ -35,6 +35,11 @@ import (
 	"github.com/Project-HAMi/HAMi/pkg/util"
 )
 
+// healthUpdateSendTimeout bounds how long watchAndRegister waits for a
+// ListAndWatch consumer to accept a device update before moving on. It is a
+// variable so tests can shorten it.
+var healthUpdateSendTimeout = 5 * time.Second
+
 // watchAndRegister is launched via ps.wg.Go in Start(), which owns the
 // WaitGroup Add(1)/Done() pairing; this function must not call wg.Done itself.
 func (ps *PluginServer) watchAndRegister() {
@@ -46,14 +51,31 @@ func (ps *PluginServer) watchAndRegister() {
 			return
 		case <-timer:
 		}
-		unhealthy := ps.mgr.GetUnHealthIDs()
-		if len(unhealthy) > 0 {
-			if err := ps.mgr.UpdateDevice(); err != nil {
-				klog.Errorf("update device error: %v", err)
-				timer = time.After(5 * time.Second)
-				continue
+		// Refresh the cached device view on every tick. Refreshing only while
+		// GetUnHealthIDs() is non-empty leaves the cache stale forever once a
+		// device recovers between two ticks: kubelet keeps the device list it
+		// was told about at startup — typically all Unhealthy when the plugin
+		// starts before the driver finished initialising — and only a plugin
+		// restart gets the node out of it.
+		if err := ps.mgr.UpdateDevice(); err != nil {
+			klog.Errorf("update device error: %v", err)
+			timer = time.After(5 * time.Second)
+			continue
+		}
+		// Publish to kubelet whenever the device set changed, in either
+		// direction. The send is bounded so that a missing ListAndWatch
+		// consumer cannot stall this loop, which would also stop the HAMi node
+		// registration below.
+		if fp := ps.deviceFingerprint(); fp != ps.lastPublishedDevices {
+			select {
+			case ps.healthCh <- 0:
+				ps.lastPublishedDevices = fp
+			case <-ps.stopCh:
+				klog.Infof("stop watch and register")
+				return
+			case <-time.After(healthUpdateSendTimeout):
+				klog.Warningf("no ListAndWatch consumer accepted the device update, retrying later")
 			}
-			ps.healthCh <- unhealthy[0]
 		}
 		err := ps.registerHAMi()
 		if err != nil {
@@ -64,6 +86,21 @@ func (ps *PluginServer) watchAndRegister() {
 			timer = time.After(30 * time.Second)
 		}
 	}
+}
+
+// deviceFingerprint summarises the device set that apiDevices() would publish,
+// so that a change in device count or in per-device health can be detected.
+func (ps *PluginServer) deviceFingerprint() string {
+	var sb strings.Builder
+	for _, dev := range ps.mgr.GetDevices() {
+		sb.WriteString(dev.UUID)
+		if dev.Health {
+			sb.WriteString("=1;")
+		} else {
+			sb.WriteString("=0;")
+		}
+	}
+	return sb.String()
 }
 
 func (ps *PluginServer) registerHAMi() error {

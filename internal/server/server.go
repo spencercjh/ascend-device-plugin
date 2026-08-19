@@ -73,6 +73,11 @@ type PluginServer struct {
 	enablePeriodicIdleVNPUCleanup bool
 	wg                            sync.WaitGroup
 
+	// lastPublishedDevices fingerprints the device set most recently handed to
+	// kubelet through ListAndWatch, so watchAndRegister only pushes an update
+	// when the set actually changed.
+	lastPublishedDevices string
+
 	// test hooks — injected by tests to avoid real socket/kubelet dependencies
 	dialFunc                 func(unixSocketPath string, timeout time.Duration) (*grpc.ClientConn, error)
 	registerKubeletFunc      func() error
@@ -130,6 +135,8 @@ func (ps *PluginServer) Start() error {
 	if err != nil {
 		return err
 	}
+	// The device set below is what the first ListAndWatch response publishes.
+	ps.lastPublishedDevices = ps.deviceFingerprint()
 	if err := ps.enableNodeDeviceShare(); err != nil {
 		return err
 	}
